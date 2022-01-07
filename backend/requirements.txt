@@ -1,0 +1,6 @@
+numpy
+spacy
+scipy
+flask
+flask-socketio
+gevent
