@@ -1,25 +1,37 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import Menu from './Menu';
+import Room from './Room';
+import Game from './Game';
+import {
+    Box,
+} from '@chakra-ui/react';
+import {
+    Route,
+    Routes,
+    BrowserRouter,
+} from 'react-router-dom';
+import colours from './colours.json';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+
+export default class App extends React.Component {
+    render() {
+        return (
+            <Box 
+                w='100vw'
+                h='100vh'
+                display='flex'
+                alignItems='center'
+                justifyContent='center'
+                bg={colours.bg}
+            >   
+                <BrowserRouter>
+                    <Routes>
+                        <Route path='/' element={<Menu />} />
+                        <Route path='/room' element={<Room />} />
+                        <Route path='/game' element={<Game />} />
+                    </Routes>
+                </BrowserRouter>
+            </Box>
+        );
+    }
 }
-
-export default App;
