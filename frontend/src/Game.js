@@ -24,7 +24,7 @@ export default class Game extends React.Component {
                             <Logo color='gray.500' size='md' />
                             <Heading size='md' fontWeight={600} color='gray.600'>30</Heading>
                         </Box>
-                        <Text mt={10}>
+                        <Text mt={14}>
                             question 1 out of 5
                         </Text>
                         <Heading mt={4} size='3xl' fontWeight={600} fontStyle='italic' fontFamily='PT Serif'>
