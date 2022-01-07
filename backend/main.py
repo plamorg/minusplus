@@ -223,7 +223,7 @@ def player_round_submit(data):
         return { 'error': 'Cannot have non-alphabetical words' }, 400
     words = [w.lower() for w in words]
     # filter duplicates
-    if any(words.count(w) > 1 for w in words):
+    if room.word in words or any(words.count(w) > 1 for w in words):
         return { 'error': 'Cannot duplicate words' }, 400
     room.submissions[sid] = tuple(words)
     emit('round-update', { 'username': session['username'] })
