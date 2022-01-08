@@ -1,7 +1,6 @@
 import React from 'react';
 import Logo from './Logo';
 import UserCard from './UserCard';
-import Indicator from './Indicator';
 import Textbox from './Textbox';
 import {
     Box,

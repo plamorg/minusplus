@@ -8,57 +8,128 @@ import {
     Button,
     HStack,
 } from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
+import { ToastContext, withNavigation } from './helper';
 import colours from './colours.json';
 
+class Menu extends React.Component {
+    startGame = async (toast) => {
+        let url = window.API_ENDPOINT + 'api/create-room'; 
+        const res = await fetch(url, { 
+            method: 'POST', 
+            body: JSON.stringify({ username: this.props.username }),
+            headers: {
+                'content-type': 'application/json',
+            },
+        });
+        
+        let data = await res.json();
+        if (res.status !== 200) {
+            toast({
+                title: data.error,
+                status: 'error',
+            });
+        } else {
+            this.props.setState({ roomcode: data.code });
+            this.props.navigate('/room');
+        }
+    }
 
-export default class Menu extends React.Component {
+    joinGame = async (toast) => {
+        console.log(this.props);
+        let url = window.API_ENDPOINT + 'api/join-room'; 
+        const res = await fetch(url, { 
+            method: 'POST', 
+            body: JSON.stringify({ 
+                username: this.props.username,
+                code: parseInt(this.props.roomcode),
+            }),
+            headers: {
+                'content-type': 'application/json',
+            },
+        });
+        
+        let data = await res.json();
+        if (res.status !== 200) {
+            console.log(data)
+            toast({
+                title: data.error,
+                status: 'error',
+            });
+        } else {
+            this.props.navigate('/room');
+        }
+    }
+    
     render() {
         return (
             <SlideFade in unmountOnExit>
                 <Box height={500} width={500}>
                     <Logo width='100%' size='2xl' />
-                    <Box 
-                        width='100%'
-                        bg='white' 
-                        mt={12} 
-                        p={5} 
-                        display='flex' 
-                        flexDirection='column' 
-                        alignItems='center'
-                        borderRadius={6}
-                    >
-                        <Textbox size='lg' placeholder='username' color='gray.700' maxLength={30} />
-                        <HStack mt={4} height={150} width='100%' spacing='20px'>
-                            <Button 
-                                fontWeight={500}
-                                height='100%' 
-                                width={220} 
-                                colorScheme='teal' 
-                                bg={colours.bg2} 
-                                fontSize={18}
+                    <ToastContext.Consumer>
+                        {(toast) => (
+                            <Box 
+                                width='100%'
+                                bg='white' 
+                                mt={12} 
+                                p={5} 
+                                display='flex' 
+                                flexDirection='column' 
+                                alignItems='center'
+                                borderRadius={6}
                             >
-                                new room
-                            </Button>
-                            <Box height='100%' width={220}>
-                                <Textbox placeholder='room code' color='gray.700' height='40px' maxLength='6'></Textbox>
-                                <Button 
-                                    fontWeight={500}
-                                    mt={2} 
-                                    width='100%' 
-                                    height='102px' 
-                                    colorScheme='green' 
-                                    bg={colours.highlight}
-                                >
-                                    join room
-                                </Button>
+                                <Textbox 
+                                    size='lg' 
+                                    placeholder='username' 
+                                    color='gray.700' 
+                                    maxLength={30} 
+                                    onChange={e => this.props.setState({username: e.target.value})} 
+                                    value={this.props.username}
+                                />
+                                <HStack mt={4} height={150} width='100%' spacing='20px'>
+                                    <Button 
+                                        fontWeight={500}
+                                        height='100%' 
+                                        width={220} 
+                                        colorScheme='teal' 
+                                        bg={colours.bg2} 
+                                        fontSize={18}
+                                        onClick={() => this.startGame(toast)}
+                                    >
+                                        new room
+                                    </Button>
+                                    <Box height='100%' width={220}>
+                                        <Textbox 
+                                            placeholder='room code' 
+                                            color='gray.700' 
+                                            height='40px' 
+                                            maxLength='6'
+                                            onChange={e => this.props.setState({roomcode: e.target.value})} 
+                                            value={this.props.roomcode}
+                                        />
+                                        <Button 
+                                            fontWeight={500}
+                                            mt={2} 
+                                            width='100%' 
+                                            height='102px' 
+                                            colorScheme='green' 
+                                            bg={colours.highlight}
+                                            onClick={() => this.joinGame(toast)}
+                                        >
+                                            join room
+                                        </Button>
+                                    </Box>
+                                </HStack>
                             </Box>
-                        </HStack>
-                    </Box>
+                        )}
+                    </ToastContext.Consumer>
                 </Box>
             </SlideFade >
         )
     }
 }
+
+export default withNavigation(Menu);
 
 /*
 if i decide to use the description thing:

@@ -14,6 +14,14 @@ import colours from './colours.json';
 
 
 export default class App extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            username: '',
+            roomcode: '',
+        }
+    }
+
     render() {
         return (
             <Box 
@@ -26,9 +34,9 @@ export default class App extends React.Component {
             >   
                 <BrowserRouter>
                     <Routes>
-                        <Route path='/' element={<Menu />} />
-                        <Route path='/room' element={<Room />} />
-                        <Route path='/game' element={<Game />} />
+                        <Route path='/' element={<Menu username={this.state.username} roomcode={this.state.roomcode} setState={e => this.setState(e)} />} />
+                        <Route path='/room' element={<Room username={this.state.username} roomcode={this.state.roomcode} setState={e => this.setState(e)} />} />
+                        <Route path='/game' element={<Game username={this.state.username} roomcode={this.state.roomcode} setState={e => this.setState(e)} />} />
                     </Routes>
                 </BrowserRouter>
             </Box>
