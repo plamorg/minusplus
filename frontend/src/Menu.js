@@ -8,7 +8,6 @@ import {
     Button,
     HStack,
 } from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom';
 import { ToastContext, withNavigation } from './helper';
 import colours from './colours.json';
 
@@ -30,13 +29,13 @@ class Menu extends React.Component {
                 status: 'error',
             });
         } else {
-            this.props.setState({ roomcode: data.code });
+            this.props.setState({ roomcode: data.code, uid: data.uid });
+            // console.log(data.uid)
             this.props.navigate('/room');
         }
     }
 
     joinGame = async (toast) => {
-        console.log(this.props);
         let url = window.API_ENDPOINT + 'api/join-room'; 
         const res = await fetch(url, { 
             method: 'POST', 
@@ -51,17 +50,18 @@ class Menu extends React.Component {
         
         let data = await res.json();
         if (res.status !== 200) {
-            console.log(data)
             toast({
                 title: data.error,
                 status: 'error',
             });
         } else {
+            this.props.setState({ uid: data.uid });
             this.props.navigate('/room');
         }
     }
     
     render() {
+
         return (
             <SlideFade in unmountOnExit>
                 <Box height={500} width={500}>

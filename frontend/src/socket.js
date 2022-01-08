@@ -1,3 +1,3 @@
 import { io } from 'socket.io-client';
 
-export const socket = io(API_ENDPOINT);
+export const socket = io(window.API_ENDPOINT);

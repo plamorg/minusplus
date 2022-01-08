@@ -5,6 +5,8 @@ import Game from './Game';
 import {
     Box,
 } from '@chakra-ui/react';
+import { ToastContext } from './helper';
+
 import {
     Route,
     Routes,
@@ -19,6 +21,12 @@ export default class App extends React.Component {
         this.state = {
             username: '',
             roomcode: '',
+            socket: null,
+            uid: '',
+            data: {
+                ready: [],
+                players: [],
+            },
         }
     }
 
@@ -33,11 +41,45 @@ export default class App extends React.Component {
                 bg={colours.bg}
             >   
                 <BrowserRouter>
-                    <Routes>
-                        <Route path='/' element={<Menu username={this.state.username} roomcode={this.state.roomcode} setState={e => this.setState(e)} />} />
-                        <Route path='/room' element={<Room username={this.state.username} roomcode={this.state.roomcode} setState={e => this.setState(e)} />} />
-                        <Route path='/game' element={<Game username={this.state.username} roomcode={this.state.roomcode} setState={e => this.setState(e)} />} />
-                    </Routes>
+                <ToastContext.Consumer>
+                    {(toast) => (
+                        <Routes>
+                            <Route path='/' element={
+                                <Menu 
+                                    username={this.state.username} 
+                                    roomcode={this.state.roomcode} 
+                                    socket={this.state.socket} 
+                                    uid={this.state.uid}
+                                    data={this.state.data}
+                                    setState={e => this.setState(e)} 
+                                />
+                            }/>
+                            <Route path='/room' element={
+                                <Room 
+                                    username={this.state.username} 
+                                    roomcode={this.state.roomcode} 
+                                    socket={this.state.socket} 
+                                    uid={this.state.uid}
+                                    data={this.state.data}
+                                    setState={e => this.setState(e)} 
+                                    toast={toast}
+                                />
+                            } />
+                            <Route path='/game' element={
+                                <Game
+                                    username={this.state.username} 
+                                    roomcode={this.state.roomcode} 
+                                    socket={this.state.socket} 
+                                    uid={this.state.uid}
+                                    data={this.state.data}
+                                    setState={e => this.setState(e)} 
+                                    toast={toast}
+                                />
+                            } />
+                        </Routes>
+                    )}
+                </ToastContext.Consumer>
+                    
                 </BrowserRouter>
             </Box>
         );
