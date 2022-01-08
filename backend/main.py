@@ -2,9 +2,8 @@ from gevent import monkey
 monkey.patch_all()
 
 from flask import Flask, request, session
-from flask_socketio import SocketIO, send, emit, ConnectionRefusedError
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
-from flask_session import Session
 import numpy as np
 import spacy
 from scipy.spatial import distance
@@ -25,9 +24,8 @@ word_vecs = np.array(word_vecs)
 app = Flask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
 app.secret_key = os.environ.get('SECRET_KEY', 'dev')
-Session(app)
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, logger=True, cors_allowed_origins="*")
 
 # the metric used to norm word vectors
 METRIC = 'cosine' 
@@ -115,11 +113,11 @@ class Room:
                 self.ready.remove(sid)
 
     def round_should_start(self):
-        return len(self.ready) > len(self.playing)/2
+        return len(self.ready) > len(self.playing)/2 and not self.is_playing()
 
     def start_round(self) -> dict[str, any]: 
         self.roundNumber += 1
-        if self.roundNumber == 0:
+        if self.roundNumber == 1:
             self.roundScores = { k:0 for k in self.playing }
         self.word = random_word()
         ROUND_TIME = 30 # seconds
@@ -142,13 +140,13 @@ class Room:
             "playerScores": { sids_to_usernames[sid]:score for sid,score in self.roundScores.items() }
         }
     
-        def delete_player(self, sid: str):
-            def removeIfExists(arr: list[str], sid: str):
-                if sid in arr:
-                    arr.remove(sid)
-            removeIfExists(self.player_ids, sid)
-            removeIfExists(self.playing, sid)
-            removeIfExists(self.ready, sid)
+    def delete_player(self, sid: str):
+        def removeIfExists(arr: list[str], sid: str):
+            if sid in arr:
+                arr.remove(sid)
+        removeIfExists(self.player_ids, sid)
+        removeIfExists(self.playing, sid)
+        removeIfExists(self.ready, sid)
 
 
 
@@ -167,7 +165,7 @@ def create_room(username):
 def create_sid():
     sid = str(uuid4())
     session['sid'] = sid
-    sid_data[sid] = {}
+    sid_data[sid] = { "sid": sid }
 
 def get_sid():
     return session['sid']
@@ -216,7 +214,14 @@ def socket_get_udata():
     return sid_data[socket_to_sid[request.sid]]
 
 def socket_error(errmsg):
-    emit('error', { "error": errmsg }, broadcast=True)
+    emit('error', { "error": errmsg })
+
+def socket_validate() -> bool:
+    return request.sid in socket_to_sid
+
+def room_broadcast(name, data):
+    udata = socket_get_udata()
+    emit(name, data, to=udata['code'])
 
 @socketio.on('connect')
 def socket_connect():
@@ -229,42 +234,60 @@ def player_identify(data):
         socket_error('Invalid body')
         return
     sid = data['uid']
-    print(sid, 'in', sid_data, '?')
     if sid not in sid_data:
         socket_error('Invalid UID')
         return
     socket_to_sid[request.sid] = sid
     udata = socket_get_udata()
-    emit('room-info', rooms[udata['code']].get_info())
+    join_room(udata['code'])
+    room_broadcast('room-info', rooms[udata['code']].get_info())
 
 @socketio.on('status-update')
 def player_status_update(data):
+    if not socket_validate():
+        socket_error('Not authenticated')
+        return
     if data is None or 'ready' not in data or not isinstance(data['ready'], bool):
         socket_error('Invalid body')
         return
     udata = socket_get_udata()
     room = rooms[udata['code']]
-    room.set_ready(get_sid())
-    emit('room-info', room.get_info(), broadcast=True)
+    room.set_ready(udata['sid'], data['ready'])
+    room_broadcast('room-info', room.get_info())
     if room.round_should_start():
         socketio.sleep(5)
         if room.round_should_start(): # someone may have unreadied in the meantime
             # actual round logic, XXX this is probably not the best place to put it
+            print('starting game in room', udata['code'])
+            room.playing = [x for x in room.player_ids]
             while room.roundNumber < 5:
-                emit('round-start', room.start_round(), broadcast=True)
-                socketio.sleep(room.endTime - int(time.time()))
-                emit('round-end', room.end_round(), broadcast=True)
+                room_broadcast('round-start', room.start_round())
+                round_time = room.endTime - int(time.time())
+                print('round_time =', round_time, '(endTime =', room.endTime, ')')
+                while round_time > 0:
+                    socketio.sleep(1)
+                    round_time -= 1
+                    if len(room.submissions) == len(room.playing):
+                        # round is done, early exit
+                        break
+                room_broadcast('round-end', room.end_round())
                 socketio.sleep(7)
+            socketio.sleep(3)
+            room_broadcast('room-info', room.get_info())
 
 @socketio.on('round-submit')
 def player_round_submit(data):
+    print('submit', data)
+    if not socket_validate():
+        socket_error('Not authenticated')
+        return
     if data is None or 'words' not in data or not isinstance(data['words'], list) or len(data['words']) != 3 or not all(isinstance(word, str) for word in data['words']):
         socket_error('Invalid body')
         return
     udata = socket_get_udata()
     words = data['words']
     room = rooms[udata['code']]
-    sid = get_sid()
+    sid = udata['sid']
     if not room.sid_is_playing(sid):
         socket_error('Round has not started yet')
         return
@@ -272,7 +295,7 @@ def player_round_submit(data):
         socket_error('You have already submitted for this round')
         return
     # filter non-alphabet
-    if not words.isalpha():
+    if not all(word.isalpha() for word in words):
         socket_error('Cannot have non-alphabetical words')
         return
     words = [w.lower() for w in words]
@@ -280,19 +303,29 @@ def player_round_submit(data):
     if room.word in words or any(words.count(w) > 1 for w in words):
         socket_error('Cannot duplicate words')
         return
+    for word in words:
+        try:
+            wv(word)
+        except ValueError:
+            # word doesn't exist
+            socket_error(f'{word} is not a word')
+            return
+    print('valid submission')
     room.submissions[sid] = tuple(words)
-    emit('round-update', { 'username': udata['username'] }, broadcast=True)
+    room_broadcast('round-update', { 'username': udata['username'] })
 
 @socketio.on('disconnect')
 def socket_disconnect():
     # remove them from room
-    if request.sid in socket_to_sid:
+    if socket_validate():
         udata = socket_get_udata()
         if 'code' in udata:
             room = rooms[udata['code']]
             room.delete_player(udata['sid'])
-            print('disconnect')
-
+            print('disconnect', udata['sid'])
+            if len(room.player_ids) == 0:
+                # no more players, delete the room
+                del rooms[udata['code']]
 if __name__ == '__main__':
     print('start')
     socketio.run(app, host='0.0.0.0', port=2345)
