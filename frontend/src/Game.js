@@ -11,9 +11,10 @@ import {
     SlideFade,
     Button,
 } from '@chakra-ui/react';
+import { withNavigation } from './helper';
 import colours from './colours.json';
 
-export default class Game extends React.Component {
+class Game extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -117,6 +118,11 @@ export default class Game extends React.Component {
 
                                         ))
                                     }
+                                    <SlideFade in={(this.state.isIdle && this.props.round.roundNumber === 5)}>
+                                        <Button colorScheme='teal' bg={colours.bg2} mt={10} onClick={() => this.props.navigate('/')} >
+                                            back to home
+                                        </Button>
+                                    </SlideFade>
                                 </Box>
                             }
                         </Box>
@@ -135,3 +141,5 @@ export default class Game extends React.Component {
         );
     }
 }
+
+export default withNavigation(Game);
