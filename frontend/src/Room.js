@@ -33,6 +33,10 @@ class Room extends React.Component {
         // console.log(this.props.uid)
         socket.on('room-info', data => this.handleData(data));
         socket.on('error', e => this.props.toast({title: e.error, status: 'error'}));
+        socket.on('round-start', round => {
+            this.props.setState({ round });
+            this.props.navigate('/game');
+        }); 
         this.props.setState({ socket });
     }
 
@@ -63,7 +67,6 @@ class Room extends React.Component {
             countdown: 5,
         }, () => {
             this.unsub = setInterval(() => {
-                if (this.state.countdown === 1) this.props.navigate('/game')
                 this.setState({countdown: this.state.countdown-1});
             }, 1000);
         });

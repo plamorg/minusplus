@@ -27,6 +27,7 @@ export default class App extends React.Component {
                 ready: [],
                 players: [],
             },
+            round: {},
         }
     }
 
@@ -63,6 +64,7 @@ export default class App extends React.Component {
                                     data={this.state.data}
                                     setState={e => this.setState(e)} 
                                     toast={toast}
+                                    round={this.state.round}
                                 />
                             } />
                             <Route path='/game' element={
@@ -74,6 +76,7 @@ export default class App extends React.Component {
                                     data={this.state.data}
                                     setState={e => this.setState(e)} 
                                     toast={toast}
+                                    round={this.state.round}
                                 />
                             } />
                         </Routes>
